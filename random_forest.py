@@ -3,7 +3,7 @@ import random
 import numpy as np
 import attr
 
-from impurity_metrics import entropy
+from impurity_metrics import entropy, gini
 
 
 class RandomForest:
@@ -23,12 +23,14 @@ class RandomForest:
 
 
 class DecisionTree:
-    def __init__(self, max_attributes, criterion, max_tree_height=None):
+    def __init__(self, max_attributes, criterion, categorical_features=None, max_tree_height=None):
         if criterion not in ('gini', 'information gain', 'information gain ratio'):
             raise ValueError('impurity_metric attribute must be "gini" or "information gain" or "information gain ratio"')
         self.max_attributes = max_attributes
-        self.impurity_metric = entropy
+        self.impurity_metric = gini if criterion == 'gini' else entropy
         self.max_tree_height = max_tree_height
+        self.criterion = 'information gain ratio'
+        self.categorical_features = [] if categorical_features is None else categorical_features
 
     def _build_node(self, X, y):
         unique_y = np.unique(y)
@@ -39,23 +41,22 @@ class DecisionTree:
         selected_attributes = random.sample(range(all_attributes), self.max_attributes)
         best_improved_impurity_value = np.inf
         for attribute in selected_attributes:
-            values = np.unique(X[:, attribute])
-            for value in values:
-                equal_indexes = X[:, attribute] == value
-                equal_labels = y[equal_indexes]
-                not_equal_labels = y[np.invert(equal_indexes)]
-                equal_impurity_value = entropy(equal_labels)
-                not_equal_impurity_value = entropy(not_equal_labels)
+            for candidate_node in AttributeValueEqualNode.generate_candidate_nodes(X, y, attribute):
+                equal_labels, not_equal_labels = candidate_node.split_labels()
+                equal_impurity_value = self.impurity_metric(equal_labels)
+                not_equal_impurity_value = self.impurity_metric(not_equal_labels)
                 samples_num = len(y)
 
                 improved_impurity_value = (len(equal_labels) * equal_impurity_value + len(not_equal_labels) * not_equal_impurity_value) / samples_num
+                if self.criterion == 'information gain ratio':
+                    intrinsic_value = entropy(X[:, attribute])
+                    improved_impurity_value /= intrinsic_value
 
                 if improved_impurity_value < best_improved_impurity_value:
-                    best_attribute = attribute
-                    best_value = value
+                    best_node = candidate_node
                     best_improved_impurity_value = improved_impurity_value
 
-        return AttributeValueEqualNode(best_attribute, best_value, X, y)
+        return best_node
 
     def _build_tree(self, X, y):
         root = self._build_node(X, y)
@@ -75,6 +76,18 @@ class AttributeValueEqualNode:
     y = attr.ib()
     equal_subtree = attr.ib(default=None)
     not_equal_subtree = attr.ib(default=None)
+
+    @classmethod
+    def generate_candidate_nodes(cls, X, y, attribute):
+        values = np.unique(X[:, attribute])
+        for value in values:
+            yield cls(attribute, value, X, y)
+
+    def split_labels(self):
+        equal_indexes = self.X[:, self.attribute] == self.value
+        equal_labels = self.y[equal_indexes]
+        not_equal_labels = self.y[np.invert(equal_indexes)]
+        return equal_labels, not_equal_labels
 
     def build_children(self, tree):
         equal_indexes = self.X[:, self.attribute] == self.value
