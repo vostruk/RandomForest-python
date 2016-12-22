@@ -5,5 +5,5 @@ from random_forest import RandomForest
 
 
 X, y = load_iris(True)
-random_forest = RandomForest(1000, 2, 'gini', None, 100)
-print(cross_val_score(random_forest, X, y, scoring='f1_macro', cv=5, n_jobs=-1))
+random_forest = RandomForest(500, 3, 'information gain ratio', None, 100)
+print(cross_val_score(random_forest, X, y, scoring='f1_macro', cv=5, n_jobs=-1).mean())

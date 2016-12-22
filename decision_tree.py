@@ -34,13 +34,13 @@ class DecisionTree:
         for attribute in selected_attributes:
             NodeType = AttributeValueEqualNode if attribute in self.categorical_features else AttributeValueLessNode
             for candidate_node in NodeType.generate_candidate_nodes(X, y, attribute, attributes_available, depth):
-                score = self._score_node(candidate_node, attribute, X, y)
+                score = self._score_node(candidate_node, X, y)
                 if score > best_score:
                     best_node = candidate_node
                     best_score = score
         return best_node
 
-    def _score_node(self, node, attribute, X, y):
+    def _score_node(self, node, X, y):
         presplit_impurity = self.impurity_metric(y)
         left_labels, right_labels = node.split_labels(X, y)
         left_impurity = self.impurity_metric(left_labels)
@@ -49,7 +49,11 @@ class DecisionTree:
         post_split_impurity = (len(left_labels) * left_impurity + len(right_labels) * right_impurity)
         gain = presplit_impurity - post_split_impurity
         if self.criterion == 'information gain ratio':
-            intrinsic_value = entropy(X[:, attribute])
+            split_probabilities = (
+                len(left_labels) / (len(left_labels) + len(right_labels)),
+                len(right_labels) / (len(left_labels) + len(right_labels))
+            )
+            intrinsic_value = -np.dot(split_probabilities, np.log2(split_probabilities))
             gain /= intrinsic_value
         return gain
 
