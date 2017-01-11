@@ -1,107 +1,203 @@
-from sklearn.datasets import load_iris
-from sklearn.model_selection import cross_val_score
-from sklearn.datasets import fetch_mldata
-
-from random_forest import RandomForest
-
-from sklearn.ensemble import RandomForestClassifier
-
-from timeit import default_timer as timer
-from collections import Counter
-import numpy as np
+"""Testing created classifier
+and comparying it with standart
+RandomForestClassifier from sklearn module
+"""
+import os
 import math
-#import urllib.request
-
+from timeit import default_timer as timer
+import shutil
+import urllib.request
+import numpy as np
+from sklearn.model_selection import cross_val_score
+from sklearn.datasets import load_svmlight_file
+from random_forest import RandomForest
+from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+
+def load_dataset(dataset_name='a1a', classification_type = 'binary'):
+    """
+    Function for loading datasets in libsvm format (from the web)
+    Other datasets can be taken from https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
+
+    dataset_name should be the same as on the csie.ntu.edu.tw site.
+    Otherwise function will not find dataset
+
+    Examples:
+        data, labels = load_dataset('iris.scale')
+        data, labels = load_dataset('skin_nonskin')
+    """
+    urlink = 'https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/'+ classification_type + '/'+ dataset_name
+    file_name = os.path.join('Datasets', dataset_name)
+    if os.path.isfile(file_name):
+        data = load_svmlight_file(file_name)
+    else:
+        try:
+            with urllib.request.urlopen(urlink) as response, open(file_name, 'wb') as out_file:
+                shutil.copyfileobj(response, out_file)
+                data = load_svmlight_file(file_name)
+        except urllib.request.URLError as err:
+            print('Cannot connect to service. 1. Check if dataset name is right 2. Check your internet connection!')
+            print(str(err))
+            return np.array([]), np.array([])
+    return data[0].toarray(), data[1]
+
+#abalone is for regression so it's not good for our classification problem!
+#https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/abalone_scale
+#x,y=load_dataset('iris.scale', 'multiclass')
+#x,y=load_dataset('diabetes_scale', 'binary')
+#abalone is regression
+#adult is missing
+#x,y=load_dataset('skin_nonskin', 'binary')
+#x,y=load_dataset('covtype.libsvm.binary.scale.bz2', 'binary')
+#x,y=load_dataset('covtype.scale.bz2', 'multiclass')
+#x,y=load_dataset('real-sim.bz2', 'binary')
+#webspam_wc_normalized_trigram.svm.bz2 
+
+
 def only_balanced(classMx):
-    ntarget = ~(classMx<-2)
+    """
+    function for removing unbalanced classes from dataset 
+    For example in abalone dataset there're classes that are represented only once
+
+    classMx is array of labels for each sample
+    """
+    ntarget = ~(classMx < -2)
     q = np.unique(classMx, return_counts=True)
-    for v in zip(q[0],q[1]):
-        if v[1]<4:
-            ntarget[classMx==v[0]] = False
+    for v in zip(q[0], q[1]):
+        if v[1] < 4:
+            ntarget[classMx == v[0]] = False
     return ntarget
 
 
-
-#Etap 1 Iris dataset
-#etap 1 num_atr = sqrt(all_atr)
-#badanie zaleznosci jakosci od liczby drzew
-def test_nTrees(DataSetName, first, last, step, scor):
-    a = fetch_mldata(DataSetName)
-    balanced_idx = only_balanced(a.target)
-    nData = a.data[balanced_idx]
-    nTarget = a.target[balanced_idx]
-    num_atr = math.ceil(math.sqrt(nData.shape[1]))
-    nTrees = range(first,last,step)
+#TestType can be: 'number_of_trees' for nTrees, 'A' for number_of_attributes, 'maximum_depth' for maxDepth
+def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maximum_depth', tested_range = [1, 10, 50], scor='f1_macro'):
+    tr = timer()
+    nData, nTarget = load_dataset(DataSetName, cl)
+    print('Dataset reading time: ' + str(timer()-tr))
+    print(TestType + ' test...')
     resOur = list()
     resSk = list()
     timeOur = list()
     timeSk = list()
-    for t in nTrees:
+    best_value = tested_range[0]
+    best_value_sk = tested_range[0]
+    best_result = 0
+    best_result_sk = 0
+    n_trees = 14
+    num_atr = math.ceil(math.sqrt(nData.shape[1]))
+    max_tree_height = 100
+    for t in tested_range:
+        if TestType == 'number_of_attributes':
+            num_atr = t
+        elif TestType == 'maximum_depth':
+            max_tree_height = t
+        else:
+            n_trees = t
+
         tbs = timer()
-        clf = RandomForestClassifier(n_estimators=t)
+        clf = RandomForestClassifier(n_estimators=n_trees, max_features=num_atr, max_depth=max_tree_height)
         sk_score = cross_val_score(clf, nData, nTarget, scoring=scor, cv=3, n_jobs=-1).mean()
         tes = timer()
         resSk.append(sk_score)
         timeSk.append(tes-tbs)
 
         tbo = timer()
-        random_forest = RandomForest(num_trees=t, num_attributes=math.ceil(math.sqrt(a.data.shape[1])), impurity_metric='gini')
-        our_score = cross_val_score(random_forest, nData, nTarget, scoring=scor , cv=3, n_jobs=-1).mean()
+        random_forest = RandomForest(num_trees=n_trees, num_attributes=num_atr, impurity_metric='gini', categorical_features=catList, max_tree_height=max_tree_height)
+        our_score = cross_val_score(random_forest, nData, nTarget, scoring=scor, cv=3, n_jobs=-1).mean()
         teo = timer()
         resOur.append(our_score)
         timeOur.append(teo-tbo)
-        print(str(t) + "  :  " + str(our_score))
+        if our_score>best_result:
+            best_value = t
+            best_result = our_score
+        if sk_score>best_result_sk:
+            best_value_sk = t
+            best_result_sk = sk_score
+        print(str(t) + "  :  " + str(our_score) + "  |  " + str(sk_score) + "  |  " + str(teo-tbo))
     
-    with PdfPages(DataSetName + '_Number_of_trees.pdf') as pdf:
+    with PdfPages(os.path.join('Charts', DataSetName + '_'+TestType + '.pdf')) as pdf:
         plt.figure(1)
         plt.subplot(211)
-        plt.plot(nTrees, resOur, 'r--',  nTrees, resSk, 'b--')
+        plt.plot(tested_range, resOur, 'r--', tested_range, resSk, 'b--')
         plt.title(DataSetName+': Accuracy')
-        #plt.xlabel('Number of trees')
+        #plt.xlabel(TestType)
         plt.ylabel('Accuracy')
-        plt.legend(['Our RF', 'SKlearn RF'], loc='lower right')
+        plt.legend(['Our RF', 'SKlearn RF'],
+                   loc='upper center',
+                   bbox_to_anchor=(0.5, 1.05),
+                   ncol=2, fancybox=True, shadow=True)
 
         plt.subplot(212)
-        plt.plot(nTrees, timeOur, 'r--',  nTrees, timeSk, 'b--')
+        plt.plot(tested_range, timeOur, 'r--', tested_range, timeSk, 'b--')
         #plt.title(DataSetName+': execution time')
-        plt.xlabel('Number of trees')
-        plt.ylabel('Execution time')
-        plt.legend(['Our RF', 'SKlearn RF'], loc='lower right')
-        pdf.savefig()  
+        plt.xlabel(TestType)
+        plt.ylabel('Execution time [sec]')
+        plt.legend(['Our RF', 'SKlearn RF'], loc='upper center', bbox_to_anchor=(0.5, 1.05),
+                   ncol=2, fancybox=True, shadow=True)
+        pdf.savefig()
         plt.close()
+    with open(os.path.join('Charts',"bestScores.txt"), "a") as myfile:
+        myfile.write('%10.2f' % best_result)
+        myfile.write('%16.2f' % best_value)
+        myfile.write('%20.2f' % best_result_sk)
+        myfile.write('%23.2f' % best_value_sk)
+        myfile.write('%15s' % DataSetName)
+        myfile.write('          ' + TestType)
+        
+    return best_result, best_value
+
+#check changability with cv=3 vs cv=10
+#test_dataset(DataSetName='iris.scale', cl='multiclass', TestType='number_of_trees', tested_range = [10]*20, scor='f1_macro')
+test_list = [1, 2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 300, 500]
+bscore, b_val = test_dataset(DataSetName='a5a',
+                             catList=[2,3,4],
+                             cl='binary',
+                             TestType='number_of_trees',
+                             tested_range=test_list,
+                             scor='f1_macro')
+
+#IRIS
+# bscore, b_val = test_dataset(DataSetName='iris.scale', cl='multiclass', TestType='number_of_trees', tested_range = [1,2, 5, 10, 50], scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='iris.scale', cl='multiclass', TestType='number_of_attributes', tested_range=range(1,5), scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='iris.scale', cl='multiclass', TestType='maximum_depth', tested_range = [1, 2, 3, 5, 10], scor='accuracy')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
 
 
-test_nTrees('iris', 2, 25, 2,'f1_macro')
-test_nTrees('diabetes_scale', 2, 25, 3,'f1_macro')
-test_nTrees('abalone', 2, 25, 5, 'accuracy')
+# #DIABETES
+# bscore, b_val = test_dataset(DataSetName='diabetes_scale', cl='binary', TestType='number_of_trees', tested_range = [1,2, 5, 10, 50], scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='diabetes_scale', cl='binary', TestType='number_of_attributes', tested_range=range(1,9), scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='diabetes_scale', cl='binary', TestType='maximum_depth', tested_range = [1, 2, 3, 5, 10, 20], scor='accuracy')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
 
 
-def test_dataset(data, target, ScoringType, Ntree, Nparam):
-    tbs = timer()
-    clf = RandomForestClassifier(n_estimators=Ntree, max_features = Nparam)
-    sk_score = cross_val_score(clf, data , target , scoring=ScoringType, cv=3, n_jobs=-1).mean()
-    tes = timer()
-
-    tbo = timer()
-    random_forest = RandomForest(num_trees=Ntree, num_attributes=Nparam, impurity_metric='gini')
-    our_score = cross_val_score(random_forest, data[balanced_idx], target[balanced_idx], scoring=ScoringType , cv=3, n_jobs=-1).mean()
-    teo = timer()
-    print('### ' + "%.4f" % sk_score + ' ### ' + "%.4f" % our_score + ' ### '+ "%.2f" % (tes-tbs) + ' ### '+ "%.2f" % (teo-tbo) + '   ' +DataSetName + str(a.data.shape))
+# #SKIN SEGMENTATION
+# bscore, b_val = test_dataset(DataSetName='skin_nonskin', cl='binary', TestType='number_of_trees', tested_range = [1,2, 5, 10, 50, 100], scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='skin_nonskin', cl='binary', TestType='number_of_attributes', tested_range=range(1,4), scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='skin_nonskin', cl='binary', TestType='maximum_depth', tested_range = [1, 2, 3, 5, 10, 20], scor='accuracy')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
 
 
-#test_dataset('iris','f1_macro', 15)
-#test_dataset('diabetes_scale','f1_macro', 20)
-#test_dataset('abalone', 'accuracy', 250)
+
+# #COVERTYPE binary
+# bscore, b_val = test_dataset(DataSetName='covtype.libsvm.binary.scale.bz2', cl='binary', TestType='number_of_trees', tested_range = [1,2, 5, 10, 50, 100], scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='covtype.libsvm.binary.scale.bz2', cl='binary', TestType='number_of_attributes', tested_range=range(1,55,3), scor='f1_macro')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
+# bscore, b_val = test_dataset(DataSetName='covtype.libsvm.binary.scale.bz2', cl='binary', TestType='maximum_depth', tested_range = [1, 2, 3, 5, 10, 20], scor='accuracy')
+# print('Best result and score: '+ str(b_val)+' '+ str(bscore))
 
 
-def load_dataset(urlink):
-    with urllib.request.urlopen(urlink) as url:
-        raw_data = url.read()               # download the file
-        i= np.loadtxt(raw_data, dtype={'names': ('age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation' ,'relationship' , 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country' 'class' ),
-                                    'formats':(np.int, '|S20',    np.float,   '|S20',    np.float,  '|S20', '|S20', '|S20', '|S20',                    '|S20', np.float,  np.float, np.float,'|S20','|S20')}, delimiter=',', skiprows=0)  # load the CSV file as a numpy matrix
-        return i
-
-#adult = load_dataset('https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data') 
+#other possible: 
+#x,y=load_dataset('mushrooms', 'binary')
+#x,y=load_dataset('covtype.scale.bz2', 'multiclass')
+#x,y=load_dataset('real-sim.bz2', 'binary')
+#webspam_wc_normalized_trigram.svm.bz2 
+#OR actually any dataset from https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
