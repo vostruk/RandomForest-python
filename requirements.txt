@@ -2,3 +2,5 @@ numpy
 sklearn
 scipy
 attrs
+matplotlib
+svmlight

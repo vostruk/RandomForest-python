@@ -89,7 +89,7 @@ class NonLeafNode:
         return left_subtree_labels, right_subtree_labels
 
     def build_children(self, tree, X, y):
-        left_subtree_indexes = X[:, self.attribute] < self.value
+        left_subtree_indexes = self._get_left_subtree_indexes(X)
         right_subtree_indexes = np.invert(left_subtree_indexes)
         left_subtree_X = X[left_subtree_indexes]
         right_subtree_X = X[right_subtree_indexes]
