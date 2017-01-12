@@ -72,7 +72,7 @@ def only_balanced(classMx):
 
 
 #TestType can be: 'number_of_trees' for nTrees, 'A' for number_of_attributes, 'maximum_depth' for maxDepth
-def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maximum_depth', tested_range = [1, 10, 50], scor='f1_macro'):
+def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maximum_depth', tested_range = [1, 10, 50], scor='f1_macro', createChart = 1):
     tr = timer()
     nData, nTarget = load_dataset(DataSetName, cl)
     print('Dataset reading time: ' + str(timer()-tr))
@@ -85,9 +85,9 @@ def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maxi
     best_value_sk = tested_range[0]
     best_result = 0
     best_result_sk = 0
-    n_trees = 14
+    n_trees = 100
     num_atr = math.ceil(math.sqrt(nData.shape[1]))
-    max_tree_height = 100
+    max_tree_height = None
     for t in tested_range:
         if TestType == 'number_of_attributes':
             num_atr = t
@@ -116,34 +116,36 @@ def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maxi
             best_value_sk = t
             best_result_sk = sk_score
         print(str(t) + "  :  " + str(our_score) + "  |  " + str(sk_score) + "  |  " + str(teo-tbo))
-    
-    with PdfPages(os.path.join('Charts', DataSetName + '_'+TestType + '.pdf')) as pdf:
-        plt.figure(1)
-        plt.subplot(211)
-        plt.plot(tested_range, resOur, 'r--', tested_range, resSk, 'b--')
-        plt.title(DataSetName+': Accuracy')
-        #plt.xlabel(TestType)
-        plt.ylabel('Accuracy')
-        plt.legend(['Our RF', 'SKlearn RF'],
-                   loc='upper center',
-                   bbox_to_anchor=(0.5, 1.05),
-                   ncol=2, fancybox=True, shadow=True)
+    if createChart == 1:
+        with PdfPages(os.path.join('Charts', DataSetName + '_'+TestType + '.pdf')) as pdf:
+            plt.figure(1)
+            plt.subplot(211)
+            plt.plot(tested_range, resOur, 'r--', tested_range, resSk, 'b--')
+            plt.title(DataSetName+': Accuracy')
+            #plt.xlabel(TestType)
+            plt.ylabel('Accuracy')
+            plt.legend(['Our RF', 'SKlearn RF'],
+                    loc='upper center',
+                    bbox_to_anchor=(0.5, 1.05),
+                    ncol=2, fancybox=True, shadow=True)
 
-        plt.subplot(212)
-        plt.plot(tested_range, timeOur, 'r--', tested_range, timeSk, 'b--')
-        #plt.title(DataSetName+': execution time')
-        plt.xlabel(TestType)
-        plt.ylabel('Execution time [sec]')
-        plt.legend(['Our RF', 'SKlearn RF'], loc='upper center', bbox_to_anchor=(0.5, 1.05),
-                   ncol=2, fancybox=True, shadow=True)
-        pdf.savefig()
-        plt.close()
-    with open(os.path.join('Charts',"bestScores.txt"), "a") as myfile:
+            plt.subplot(212)
+            plt.plot(tested_range, timeOur, 'r--', tested_range, timeSk, 'b--')
+            #plt.title(DataSetName+': execution time')
+            plt.xlabel(TestType)
+            plt.ylabel('Execution time [sec]')
+            plt.legend(['Our RF', 'SKlearn RF'], loc='upper center', bbox_to_anchor=(0.5, 1.05),
+                    ncol=2, fancybox=True, shadow=True)
+            pdf.savefig()
+            plt.close()
+    fname = "bestScores.txt"
+    if createChart != 1:
+        fname = "compareScores.txt"
+    with open(os.path.join('Charts',fname), "a") as myfile:
         myfile.write('%10.2f' % best_result)
         myfile.write('%16.2f' % best_value)
         myfile.write('%20.2f' % best_result_sk)
         myfile.write('%23.2f' % best_value_sk)
         myfile.write('%15s' % DataSetName)
-        myfile.write('          ' + TestType)
-        
+        myfile.write('          ' + TestType) 
     return best_result, best_value
