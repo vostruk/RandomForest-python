@@ -7,13 +7,13 @@
 from test import test_dataset
 
 
-test_list = [1, 2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 300, 500]
-bscore, b_val = test_dataset(DataSetName='a1a',
-                             catList=[],
-                             cl='binary',
-                             TestType='number_of_trees',
-                             tested_range=test_list,
-                             scor='f1_macro')
+# test_list = [1, 2, 3, 4, 5, 8, 10, 15, 20, 30, 50, 100, 200, 300, 500]
+# bscore, b_val = test_dataset(DataSetName='a1a',
+#                              catList=[],
+#                              cl='binary',
+#                              TestType='number_of_trees',
+#                              tested_range=test_list,
+#                              scor='f1_macro')
 
 
 bscore, b_val = test_dataset(DataSetName='a1a',

@@ -30,3 +30,7 @@ bscore, b_val = test_dataset(DataSetName='covtype.libsvm.binary.scale.bz2',
                              tested_range=test_list,
                              scor='accuracy')
 
+"""
+1  :  0.599992745902  |  0.596974142795  |  6437.5122757280005
+2  :  0.5500934835  |  0.535020310827  |  12341.013730789004
+"""
