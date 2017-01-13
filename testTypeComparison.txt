@@ -1,0 +1,38 @@
+iris.scale
+GINI  information gain ratio   information gain
+            0.95            0.97            0.95
+iris.scale
+GINI  information gain ratio   information gain
+            0.97            0.96            0.97
+diabetes
+GINI  information gain ratio   information gain
+            0.73            0.73            0.73
+iris.scale
+GINI  information gain ratio   information gain
+            0.97            0.96            0.96
+iris.scale
+GINI  information gain ratio   information gain
+            0.97            0.95            0.97
+a1a
+GINI  information gain ratio   information gain
+            0.75            0.75            0.76
+mushrooms
+GINI  information gain ratio   information gain
+            0.89            0.89            0.89
+iris.scale
+GINI  information gain ratio   information gain
+            0.96            0.97            0.95
+diabetes
+GINI  information gain ratio   information gain
+            0.72            0.73            0.73
+mushrooms
+GINI  information gain ratio   information gain
+            0.89            0.89            0.89
+iris.scale
+GINI  information gain ratio   information gain
+            0.97            0.96            0.96
+mushrooms
+GINI  information gain ratio   information gain
+            0.89            0.89            0.89
+skin_nonskin
+GINI  information gain ratio   information gain

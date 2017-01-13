@@ -41,3 +41,11 @@ test_dataset(DataSetName='mushrooms',
              tested_range=[100],
              scor='f1_macro',
              createChart = 0)
+
+test_dataset(DataSetName='covtype.libsvm.binary.scale.bz2',
+             catList=[],
+             cl='binary',
+             TestType='number_of_trees',
+             tested_range=[100],
+             scor='f1_macro',
+             createChart = 0)
