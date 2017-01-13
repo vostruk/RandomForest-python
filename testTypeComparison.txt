@@ -36,3 +36,11 @@ GINI  information gain ratio   information gain
             0.89            0.89            0.89
 skin_nonskin
 GINI  information gain ratio   information gain
+skin_nonskin
+GINI  information gain ratio   information gain
+            0.95            0.95            0.95
+madelon
+GINI  information gain ratio   information gain
+            0.65            0.65            0.66
+covtype.libsvm.binary.scale.bz2
+GINI  information gain ratio   information gain
