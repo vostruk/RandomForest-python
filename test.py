@@ -75,7 +75,7 @@ def only_balanced(classMx):
 def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maximum_depth', tested_range = [1, 10, 50], scor='f1_macro', createChart = 1):
     tr = timer()
     nData, nTarget = load_dataset(DataSetName, cl)
-    print('Dataset reading time: ' + str(timer()-tr))
+    #print('Dataset reading time: ' + str(timer()-tr))
     print(TestType + ' test...')
     resOur = list()
     resSk = list()
@@ -85,12 +85,16 @@ def test_dataset(DataSetName='a1a', catList = [] , cl = 'binary', TestType='maxi
     best_value_sk = tested_range[0]
     best_result = 0
     best_result_sk = 0
-    n_trees = 100
+    n_trees = 30
     num_atr = math.ceil(math.sqrt(nData.shape[1]))
     max_tree_height = None
+    print("value  :  our score   |  sklearn score   |  our time ")
     for t in tested_range:
         if TestType == 'number_of_attributes':
-            num_atr = t
+            if t < nData.shape[1]:
+                num_atr = t
+            else: 
+                continue
         elif TestType == 'maximum_depth':
             max_tree_height = t
         else:
